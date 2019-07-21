@@ -39,7 +39,7 @@ var _jwt = require('./jwt');
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var hostname = '127.0.0.1';
-var port = 3000;
+var port = process.env.PORT || 3000;
 var app = (0, _express2.default)();
 // setup express application
 var server = _http2.default.createServer(app);

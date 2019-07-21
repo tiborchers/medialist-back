@@ -8,10 +8,6 @@ var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = [
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _redis = require('../redis');
-
-var _redis2 = _interopRequireDefault(_redis);
-
 var _models = require('../models');
 
 var _models2 = _interopRequireDefault(_models);
@@ -181,14 +177,13 @@ var Books = function () {
                       GM.addGenre(created);
                     });
                   });
-                  _redis2.default.del('bookToRead');
                   res.status(201).send({
                     success: true,
                     message: 'Book successfully created',
                     newBook: newBook
                   });
 
-                case 6:
+                case 5:
                 case 'end':
                   return _context2.stop();
               }
@@ -391,7 +386,6 @@ var Books = function () {
           gm.destroy();
         });
         return book.destroy().then(function () {
-          _redis2.default.del('bookToRead');
           res.status(200).send({
             success: true,
             message: 'Book successfully deleted'
@@ -607,7 +601,6 @@ var Books = function () {
                     rating: rating || book.rating,
                     author: author || book.author
                   }).then(function (updated) {
-                    _redis2.default.del('bookToRead');
                     res.status(200).send({
                       success: true,
                       message: 'Book updated successfully',
@@ -844,7 +837,6 @@ var Books = function () {
                     return elem[0];
                   });
                   GM.setGenres(newGenres).then(function (data) {
-                    _redis2.default.del('bookToRead');
                     res.status(200).send({
                       success: true,
                       message: 'Books genres changed',
