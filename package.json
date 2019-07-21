@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon --exec babel-node app.js",
-    "erd": "sequelize-erd --source ./server/models/index.js --destination ./erd.svg"
+    "startdev": "nodemon --exec babel-node ./server/app.js",
+    "start": "node build/app.js",
+    "build": "babel server -d build"
   },
   "keywords": [],
   "author": "",
@@ -30,6 +31,7 @@
     "sequelize-erd": "^1.2.0"
   },
   "dependencies": {
+    "babel-polyfill": "^6.26.0",
     "bcrypt": "^3.0.6",
     "bcrypt-nodejs": "0.0.3",
     "bluebird": "^3.5.4",

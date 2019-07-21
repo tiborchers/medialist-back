@@ -2,14 +2,13 @@ import model from '../models'
 import Sequelize from 'sequelize'
 
 const {
-  Series,
-  UserSeries,
+  Serie,
+  UserSerie,
   Genre,
-  Seasons,
-  Episodes,
-  UserEpisodes,
+  Season,
+  Episode,
+  UserEpisode,
   User,
-  Series
 } = model
 
 const Op = Sequelize.Op
@@ -40,7 +39,9 @@ class Series {
           }
         })
         .then(series => res.status(200).send(series))
-  }
+  })
+}
+
   static toWatchCount(req, res) {
     return req.user.then(user => {
       user
