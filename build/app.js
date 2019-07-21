@@ -1,5 +1,7 @@
 'use strict';
 
+require('babel-polyfill');
+
 var _http = require('http');
 
 var _http2 = _interopRequireDefault(_http);
