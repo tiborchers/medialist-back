@@ -1,4 +1,3 @@
-import rc from '../redis'
 import model from '../models'
 import Sequelize from 'sequelize'
 
@@ -97,7 +96,6 @@ class Books {
             GM.addGenre(created)
           })
         })
-        rc.del('bookToRead')
         res.status(201).send({
           success: true,
           message: 'Book successfully created',
@@ -331,7 +329,6 @@ class Books {
           gm.destroy()
         })
         return book.destroy().then(() => {
-          rc.del('bookToRead')
           res.status(200).send({
             success: true,
             message: 'Book successfully deleted'
@@ -470,7 +467,6 @@ class Books {
             author: author || book.author
           })
           .then(updated => {
-            rc.del('bookToRead')
             res.status(200).send({
               success: true,
               message: 'Book updated successfully',
@@ -611,7 +607,6 @@ class Books {
       newGenres = newGenres.map(elem => elem[0])
       GM.setGenres(newGenres)
         .then(data => {
-          rc.del('bookToRead')
           res.status(200).send({
             success: true,
             message: 'Books genres changed',

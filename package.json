@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "startdev": "nodemon --exec babel-node ./server/app.js",
     "start": "node build/app.js",
-    "build": "babel server -d build"
+    "build": "rm -rf build && mkdir build &&  babel server -d build && cp -avr server/config build/config && cp -avr server/controllers/scripts build/controllers/scripts "
   },
   "keywords": [],
   "author": "",

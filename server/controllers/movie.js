@@ -1,4 +1,3 @@
-import rc from '../redis'
 import model from '../models'
 import Sequelize from 'sequelize'
 
@@ -307,7 +306,6 @@ class Movies {
             gm.destroy()
           })
           return movie.destroy().then(() => {
-            rc.del('movieToWatch')
             res.status(200).send({
               success: true,
               message: 'Movie successfully deleted'
@@ -442,7 +440,6 @@ class Movies {
             rating: rating || movie.rating
           })
           .then(updated => {
-            rc.del('movieToWatch')
             res.status(200).send({
               success: true,
               message: 'Movie updated successfully',
