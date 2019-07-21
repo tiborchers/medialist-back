@@ -17,7 +17,7 @@
     "username": "mediauser",
     "password": "2237328",
     "database": "medialist",
-    "host": "127.0.0.1",
+    "host": "0.0.0.0",
     "dialect": "postgres"
   }
 }
