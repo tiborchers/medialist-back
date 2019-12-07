@@ -52,7 +52,7 @@
     "pg": "^7.9.0",
     "pg-hstore": "^2.3.2",
     "redis": "^2.8.0",
-    "sequelize": "^5.7.6",
+    "sequelize": "^5.15.1",
     "sequelize-redis": "^1.0.12",
     "sequelize-redis-cache": "^2.0.1",
     "sequelize-transparent-cache": "^2.0.1",
