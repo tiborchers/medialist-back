@@ -1,7 +1,7 @@
 {
-"development": {
-    "username": "postgres",
-    "password": "2237328",
+  "development": {
+    "username": "mediauser",
+    "password": "",
     "database": "medialist",
     "host": "127.0.0.1",
     "dialect": "postgres"
