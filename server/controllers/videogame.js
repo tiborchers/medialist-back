@@ -1,5 +1,6 @@
 import model from '../models'
 import Sequelize from 'sequelize'
+import axios from 'axios'
 
 const { VideoGame, GenericMedia, Genre, Console, User, UserGM } = model
 
@@ -402,18 +403,17 @@ class VideoGames {
     const { url } = req.body
     if (
       typeof url === 'undefined' ||
-      !url.includes('https://howlongtobeat.com/game.php?id=')
+      !url.includes('https://howlongtobeat.com/game?id=')
     ) {
       return res.status(400).send({
         success: false,
         message: 'No url'
       })
     }
-    const spawn = require('child_process').spawn
-    const pythonProcess = await spawn('python', [
-      'server/controllers/scripts/hltb.py',
-      url
-    ])
+    const execFile = require('child_process').exec
+    const pythonProcess = await execFile(
+      'server\\controllers\\scripts\\hltb.py ' + url
+    )
     pythonProcess.stdout.on('data', data => {
       const {
         image,
@@ -484,6 +484,98 @@ class VideoGames {
         })
       }
     })
+  }
+
+  static async createByUrlFlask(req, res) {
+    const { url } = req.body
+    if (
+      typeof url === 'undefined' ||
+      !url.includes('https://howlongtobeat.com/game?id=')
+    ) {
+      return res.status(400).send({
+        success: false,
+        message: 'No url'
+      })
+    }
+    let result = null
+    let success = false
+    await axios
+      .post('http://192.168.1.90:5000/hltb', {
+        url: url
+      })
+      .then(res => {
+        result = res.data
+        success = true
+      })
+      .catch(err => {
+        result = err
+      })
+    if (!success) {
+      return res.status(400).send({
+        success: false,
+        message: result.toString()
+      })
+    }
+    const {
+      image,
+      title,
+      year,
+      commentary,
+      HLTB,
+      developer,
+      rating,
+      genres,
+      consoles
+    } = result
+    return GenericMedia.findOrCreate({
+      where: {
+        title: title,
+        year: year
+      },
+      defaults: {
+        image: image,
+        commentary: commentary
+      }
+    })
+      .then(async ([newGM, createdShort]) => {
+        if (createdShort) {
+          genres.map(genre => {
+            Genre.findOrCreate({
+              where: { name: genre, isFor: 'VideoGame' }
+            }).then(([newGenre, created]) => {
+              newGM.addGenre(newGenre)
+            })
+          })
+          let GMId = newGM.id
+          await VideoGame.create({ HLTB, developer, rating, GMId }).then(
+            newVideoGame => {
+              consoles.map(aConsole => {
+                Console.findOrCreate({
+                  where: {
+                    name: aConsole
+                  }
+                }).then(([created, found]) => {
+                  newVideoGame.addConsole(created)
+                })
+              })
+            }
+          )
+        }
+        let user = await req.user
+        await user.addGenericMedium(newGM)
+        res.status(201).send({
+          success: true,
+          message: 'VideoGame successfully created',
+          newGM
+        })
+      })
+      .catch(error => {
+        res.status(400).send({
+          success: false,
+          message: 'VideoGame creation failed',
+          error
+        })
+      })
   }
 
   static modify(req, res) {

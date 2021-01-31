@@ -16,6 +16,10 @@ var _sequelize = require('sequelize');
 
 var _sequelize2 = _interopRequireDefault(_sequelize);
 
+var _axios = require('axios');
+
+var _axios2 = _interopRequireDefault(_axios);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -268,8 +272,10 @@ var Albums = function () {
             where: { consumed: false }
           }
         }).then(function (albums) {
-          return res.status(200).send(albums);
+          res.status(200).send(albums);
         });
+      }).catch(function (error) {
+        return res.status(400).send(error);
       });
     }
   }, {
@@ -523,7 +529,7 @@ var Albums = function () {
                 }
 
                 _context6.next = 8;
-                return execFile('python', ['server/controllers/scripts/allmusic.py', url]);
+                return execFile('python3', ['server/controllers/scripts/allmusic.py', url]);
 
               case 8:
                 pythonProcess = _context6.sent;
@@ -532,7 +538,7 @@ var Albums = function () {
 
               case 11:
                 _context6.next = 13;
-                return execFile('python', ['server/controllers/scripts/rym.py', url]);
+                return execFile('python3', ['server/controllers/scripts/rym.py', url]);
 
               case 13:
                 pythonProcess = _context6.sent;
@@ -705,9 +711,224 @@ var Albums = function () {
       return createByUrl;
     }()
   }, {
+    key: 'createByUrlFlask',
+    value: function () {
+      var _ref21 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(req, res) {
+        var _this4 = this;
+
+        var url, result, success, _result, image, title, year, commentary, duration, numberOfSongs, artist, rating, genres, songs;
+
+        return regeneratorRuntime.wrap(function _callee10$(_context10) {
+          while (1) {
+            switch (_context10.prev = _context10.next) {
+              case 0:
+                url = req.body.url;
+
+                if (!(typeof url === 'undefined' || !url.includes('allmusic.com/') && !url.includes('rateyourmusic.com/'))) {
+                  _context10.next = 3;
+                  break;
+                }
+
+                return _context10.abrupt('return', res.status(400).send({
+                  success: false,
+                  message: 'No url'
+                }));
+
+              case 3:
+                result = null;
+                success = false;
+
+                if (!url.includes('allmusic.com/')) {
+                  _context10.next = 10;
+                  break;
+                }
+
+                _context10.next = 8;
+                return _axios2.default.post('http://python-dot-jovial-branch-266213.appspot.com/allmusic', {
+                  url: url
+                }).then(function (res) {
+                  result = res;
+                  success = true;
+                }).catch(function (err) {
+                  result = err;
+                });
+
+              case 8:
+                _context10.next = 12;
+                break;
+
+              case 10:
+                _context10.next = 12;
+                return _axios2.default.post('http://python-dot-jovial-branch-266213.appspot.com/rym', {
+                  url: url
+                }).then(function (res) {
+                  result = res;
+                  success = true;
+                }).catch(function (err) {
+                  result = err;
+                });
+
+              case 12:
+                if (success) {
+                  _context10.next = 14;
+                  break;
+                }
+
+                return _context10.abrupt('return', res.status(400).send({
+                  success: false,
+                  message: result.toString()
+                }));
+
+              case 14:
+                _result = result, image = _result.image, title = _result.title, year = _result.year, commentary = _result.commentary, duration = _result.duration, numberOfSongs = _result.numberOfSongs, artist = _result.artist, rating = _result.rating, genres = _result.genres, songs = _result.songs;
+                return _context10.abrupt('return', GenericMedia.findOrCreate({
+                  where: {
+                    title: title,
+                    year: year
+                  },
+                  defaults: {
+                    image: image,
+                    commentary: commentary
+                  }
+                }).then(function () {
+                  var _ref23 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(_ref22) {
+                    var _ref24 = _slicedToArray(_ref22, 2),
+                        newGM = _ref24[0],
+                        createdShort = _ref24[1];
+
+                    var GMId, user;
+                    return regeneratorRuntime.wrap(function _callee9$(_context9) {
+                      while (1) {
+                        switch (_context9.prev = _context9.next) {
+                          case 0:
+                            if (!createdShort) {
+                              _context9.next = 5;
+                              break;
+                            }
+
+                            genres.map(function () {
+                              var _ref25 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(genre) {
+                                return regeneratorRuntime.wrap(function _callee7$(_context7) {
+                                  while (1) {
+                                    switch (_context7.prev = _context7.next) {
+                                      case 0:
+                                        _context7.next = 2;
+                                        return Genre.findOrCreate({
+                                          where: { name: genre, isFor: 'Album' }
+                                        }).then(function (_ref26) {
+                                          var _ref27 = _slicedToArray(_ref26, 2),
+                                              newGenre = _ref27[0],
+                                              created = _ref27[1];
+
+                                          return newGM.addGenre(newGenre);
+                                        });
+
+                                      case 2:
+                                      case 'end':
+                                        return _context7.stop();
+                                    }
+                                  }
+                                }, _callee7, _this4);
+                              }));
+
+                              return function (_x11) {
+                                return _ref25.apply(this, arguments);
+                              };
+                            }());
+                            GMId = newGM.id;
+                            _context9.next = 5;
+                            return Album.create({
+                              duration: duration,
+                              artist: artist,
+                              numberOfSongs: numberOfSongs,
+                              rating: rating,
+                              GMId: GMId
+                            }).then(function () {
+                              var _ref28 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(newAlbum) {
+                                var newSongs;
+                                return regeneratorRuntime.wrap(function _callee8$(_context8) {
+                                  while (1) {
+                                    switch (_context8.prev = _context8.next) {
+                                      case 0:
+                                        newSongs = songs.map(function (newSong) {
+                                          return Song.create(newSong);
+                                        });
+                                        _context8.next = 3;
+                                        return Promise.all(newSongs);
+
+                                      case 3:
+                                        newSongs = _context8.sent;
+                                        _context8.next = 6;
+                                        return newAlbum.setSongs(newSongs);
+
+                                      case 6:
+                                      case 'end':
+                                        return _context8.stop();
+                                    }
+                                  }
+                                }, _callee8, _this4);
+                              }));
+
+                              return function (_x12) {
+                                return _ref28.apply(this, arguments);
+                              };
+                            }());
+
+                          case 5:
+                            _context9.next = 7;
+                            return req.user;
+
+                          case 7:
+                            user = _context9.sent;
+                            _context9.next = 10;
+                            return user.addGenericMedium(newGM);
+
+                          case 10:
+                            return _context9.abrupt('return', res.status(201).send({
+                              success: true,
+                              message: 'Album successfully created',
+                              newGM: newGM
+                            }));
+
+                          case 11:
+                          case 'end':
+                            return _context9.stop();
+                        }
+                      }
+                    }, _callee9, _this4);
+                  }));
+
+                  return function (_x10) {
+                    return _ref23.apply(this, arguments);
+                  };
+                }()).catch(function (error) {
+                  if (!res._headerSent) {
+                    return res.status(400).send({
+                      success: false,
+                      message: 'Album creation failed',
+                      error: error
+                    });
+                  }
+                }));
+
+              case 16:
+              case 'end':
+                return _context10.stop();
+            }
+          }
+        }, _callee10, this);
+      }));
+
+      function createByUrlFlask(_x8, _x9) {
+        return _ref21.apply(this, arguments);
+      }
+
+      return createByUrlFlask;
+    }()
+  }, {
     key: 'modify',
     value: function modify(req, res) {
-      var _this4 = this;
+      var _this5 = this;
 
       var _req$body3 = req.body,
           image = _req$body3.image,
@@ -720,28 +941,28 @@ var Albums = function () {
           rating = _req$body3.rating;
 
       return Album.findByPk(req.params.albumId).then(function () {
-        var _ref21 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(album) {
+        var _ref29 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11(album) {
           var gm;
-          return regeneratorRuntime.wrap(function _callee7$(_context7) {
+          return regeneratorRuntime.wrap(function _callee11$(_context11) {
             while (1) {
-              switch (_context7.prev = _context7.next) {
+              switch (_context11.prev = _context11.next) {
                 case 0:
                   if (album) {
-                    _context7.next = 2;
+                    _context11.next = 2;
                     break;
                   }
 
-                  return _context7.abrupt('return', res.status(404).send({
+                  return _context11.abrupt('return', res.status(404).send({
                     success: false,
                     message: 'Album Not Found'
                   }));
 
                 case 2:
-                  _context7.next = 4;
+                  _context11.next = 4;
                   return album.getGenericMedium();
 
                 case 4:
-                  gm = _context7.sent;
+                  gm = _context11.sent;
 
                   gm.update({
                     image: image || gm.image,
@@ -778,14 +999,14 @@ var Albums = function () {
 
                 case 7:
                 case 'end':
-                  return _context7.stop();
+                  return _context11.stop();
               }
             }
-          }, _callee7, _this4);
+          }, _callee11, _this5);
         }));
 
-        return function (_x8) {
-          return _ref21.apply(this, arguments);
+        return function (_x13) {
+          return _ref29.apply(this, arguments);
         };
       }()).catch(function (error) {
         res.status(400).send({
@@ -798,21 +1019,21 @@ var Albums = function () {
   }, {
     key: 'listened',
     value: function listened(req, res) {
-      var _this5 = this;
+      var _this6 = this;
 
       return req.user.then(function (user) {
         Album.findByPk(req.params.albumId).then(function () {
-          var _ref22 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(album) {
+          var _ref30 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee12(album) {
             var gm;
-            return regeneratorRuntime.wrap(function _callee8$(_context8) {
+            return regeneratorRuntime.wrap(function _callee12$(_context12) {
               while (1) {
-                switch (_context8.prev = _context8.next) {
+                switch (_context12.prev = _context12.next) {
                   case 0:
-                    _context8.next = 2;
+                    _context12.next = 2;
                     return album.getGenericMedium();
 
                   case 2:
-                    gm = _context8.sent;
+                    gm = _context12.sent;
 
                     user.addGenericMedium(gm, {
                       through: {
@@ -835,14 +1056,14 @@ var Albums = function () {
 
                   case 4:
                   case 'end':
-                    return _context8.stop();
+                    return _context12.stop();
                 }
               }
-            }, _callee8, _this5);
+            }, _callee12, _this6);
           }));
 
-          return function (_x9) {
-            return _ref22.apply(this, arguments);
+          return function (_x14) {
+            return _ref30.apply(this, arguments);
           };
         }()).catch(function (error) {
           res.status(400).send({
@@ -855,23 +1076,23 @@ var Albums = function () {
   }, {
     key: 'listenedDate',
     value: function listenedDate(req, res) {
-      var _this6 = this;
+      var _this7 = this;
 
       var date = req.body.date;
 
       return req.user.then(function (user) {
         Album.findByPk(req.params.albumId).then(function () {
-          var _ref23 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(album) {
+          var _ref31 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee13(album) {
             var gm;
-            return regeneratorRuntime.wrap(function _callee9$(_context9) {
+            return regeneratorRuntime.wrap(function _callee13$(_context13) {
               while (1) {
-                switch (_context9.prev = _context9.next) {
+                switch (_context13.prev = _context13.next) {
                   case 0:
-                    _context9.next = 2;
+                    _context13.next = 2;
                     return album.getGenericMedium();
 
                   case 2:
-                    gm = _context9.sent;
+                    gm = _context13.sent;
 
                     user.addGenericMedium(gm, {
                       through: {
@@ -888,14 +1109,14 @@ var Albums = function () {
 
                   case 4:
                   case 'end':
-                    return _context9.stop();
+                    return _context13.stop();
                 }
               }
-            }, _callee9, _this6);
+            }, _callee13, _this7);
           }));
 
-          return function (_x10) {
-            return _ref23.apply(this, arguments);
+          return function (_x15) {
+            return _ref31.apply(this, arguments);
           };
         }()).catch(function (error) {
           res.status(400).send({
@@ -908,21 +1129,21 @@ var Albums = function () {
   }, {
     key: 'unListened',
     value: function unListened(req, res) {
-      var _this7 = this;
+      var _this8 = this;
 
       return req.user.then(function (user) {
         Album.findByPk(req.params.albumId).then(function () {
-          var _ref24 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(album) {
+          var _ref32 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee14(album) {
             var gm;
-            return regeneratorRuntime.wrap(function _callee10$(_context10) {
+            return regeneratorRuntime.wrap(function _callee14$(_context14) {
               while (1) {
-                switch (_context10.prev = _context10.next) {
+                switch (_context14.prev = _context14.next) {
                   case 0:
-                    _context10.next = 2;
+                    _context14.next = 2;
                     return album.getGenericMedium();
 
                   case 2:
-                    gm = _context10.sent;
+                    gm = _context14.sent;
 
                     user.addGenericMedium(gm, {
                       through: {
@@ -939,14 +1160,14 @@ var Albums = function () {
 
                   case 4:
                   case 'end':
-                    return _context10.stop();
+                    return _context14.stop();
                 }
               }
-            }, _callee10, _this7);
+            }, _callee14, _this8);
           }));
 
-          return function (_x11) {
-            return _ref24.apply(this, arguments);
+          return function (_x16) {
+            return _ref32.apply(this, arguments);
           };
         }()).catch(function (error) {
           res.status(400).send({
@@ -959,33 +1180,33 @@ var Albums = function () {
   }, {
     key: 'changeGenres',
     value: function changeGenres(req, res) {
-      var _this8 = this;
+      var _this9 = this;
 
       var genres = req.body.genres;
 
       Album.findByPk(req.params.albumId).then(function () {
-        var _ref25 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11(album) {
+        var _ref33 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee15(album) {
           var GM, newGenres;
-          return regeneratorRuntime.wrap(function _callee11$(_context11) {
+          return regeneratorRuntime.wrap(function _callee15$(_context15) {
             while (1) {
-              switch (_context11.prev = _context11.next) {
+              switch (_context15.prev = _context15.next) {
                 case 0:
                   if (album) {
-                    _context11.next = 2;
+                    _context15.next = 2;
                     break;
                   }
 
-                  return _context11.abrupt('return', res.status(404).send({
+                  return _context15.abrupt('return', res.status(404).send({
                     success: false,
                     message: 'Album Not Found'
                   }));
 
                 case 2:
-                  _context11.next = 4;
+                  _context15.next = 4;
                   return album.getGenericMedium();
 
                 case 4:
-                  GM = _context11.sent;
+                  GM = _context15.sent;
                   newGenres = genres.map(function (genre) {
                     return Genre.findOrCreate({
                       where: {
@@ -994,11 +1215,11 @@ var Albums = function () {
                       }
                     });
                   });
-                  _context11.next = 8;
+                  _context15.next = 8;
                   return Promise.all(newGenres);
 
                 case 8:
-                  newGenres = _context11.sent;
+                  newGenres = _context15.sent;
 
                   newGenres = newGenres.map(function (elem) {
                     return elem[0];
@@ -1019,14 +1240,14 @@ var Albums = function () {
 
                 case 11:
                 case 'end':
-                  return _context11.stop();
+                  return _context15.stop();
               }
             }
-          }, _callee11, _this8);
+          }, _callee15, _this9);
         }));
 
-        return function (_x12) {
-          return _ref25.apply(this, arguments);
+        return function (_x17) {
+          return _ref33.apply(this, arguments);
         };
       }()).catch(function (error) {
         res.status(400).send({
@@ -1039,23 +1260,23 @@ var Albums = function () {
   }, {
     key: 'changeSongs',
     value: function changeSongs(req, res) {
-      var _this9 = this;
+      var _this10 = this;
 
       var songs = req.body.songs;
 
       Album.findByPk(req.params.albumId).then(function () {
-        var _ref26 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee12(album) {
+        var _ref34 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee16(album) {
           var newSongs;
-          return regeneratorRuntime.wrap(function _callee12$(_context12) {
+          return regeneratorRuntime.wrap(function _callee16$(_context16) {
             while (1) {
-              switch (_context12.prev = _context12.next) {
+              switch (_context16.prev = _context16.next) {
                 case 0:
                   if (album) {
-                    _context12.next = 2;
+                    _context16.next = 2;
                     break;
                   }
 
-                  return _context12.abrupt('return', res.status(404).send({
+                  return _context16.abrupt('return', res.status(404).send({
                     success: false,
                     message: 'Album Not Found'
                   }));
@@ -1072,11 +1293,11 @@ var Albums = function () {
                       }
                     });
                   });
-                  _context12.next = 5;
+                  _context16.next = 5;
                   return Promise.all(newSongs);
 
                 case 5:
-                  newSongs = _context12.sent;
+                  newSongs = _context16.sent;
 
                   newSongs = newSongs.map(function (elem) {
                     return elem[0];
@@ -1097,14 +1318,14 @@ var Albums = function () {
 
                 case 8:
                 case 'end':
-                  return _context12.stop();
+                  return _context16.stop();
               }
             }
-          }, _callee12, _this9);
+          }, _callee16, _this10);
         }));
 
-        return function (_x13) {
-          return _ref26.apply(this, arguments);
+        return function (_x18) {
+          return _ref34.apply(this, arguments);
         };
       }()).catch(function (error) {
         res.status(400).send({

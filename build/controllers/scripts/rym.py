@@ -7,8 +7,7 @@ import sys
 from bs4 import BeautifulSoup
 import requests
 
-URL = sys.argv[1]
-TRACKNUMBER = 0
+# URL = sys.argv[1]
 
 
 def to_seconds(song_duration):
@@ -88,5 +87,5 @@ def main(url):
     return veamos
 
 
-print(json.dumps(main(URL), ensure_ascii=False).encode("utf8"))
-sys.stdout.flush()
+# print(json.dumps(main(URL), ensure_ascii=False))
+# sys.stdout.flush()

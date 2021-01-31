@@ -4,12 +4,12 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _redis = require('redis');
+var _ioredis = require('ioredis');
 
-var _redis2 = _interopRequireDefault(_redis);
+var _ioredis2 = _interopRequireDefault(_ioredis);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var rc = _redis2.default.createClient();
+var redis = new _ioredis2.default();
 
-exports.default = rc;
+exports.default = redis;

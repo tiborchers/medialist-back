@@ -1,7 +1,8 @@
 import model from '../models'
 import Sequelize from 'sequelize'
+import axios from 'axios'
 
-const { Album, GenericMedia, Genre, Song, UserGM, User } = model
+let { Album, GenericMedia, Genre, Song, UserGM, User } = model
 
 const Op = Sequelize.Op
 
@@ -141,49 +142,54 @@ class Albums {
   }
 
   static toListen(req, res) {
-    return req.user.then(user => {
-      user
-        .getGenericMedia({
-          include: [
-            {
-              model: Album,
-              attributes: [
-                'id',
-                'rating',
-                'duration',
-                'artist',
-                'numberOfSongs'
-              ],
-              include: [
-                {
-                  model: Song,
-                  attributes: ['disc', 'trackNumber', 'title', 'duration']
-                }
-              ]
+    return req.user
+      .then(user => {
+        user
+          .getGenericMedia({
+            include: [
+              {
+                model: Album,
+                attributes: [
+                  'id',
+                  'rating',
+                  'duration',
+                  'artist',
+                  'numberOfSongs'
+                ],
+                include: [
+                  {
+                    model: Song,
+                    attributes: ['disc', 'trackNumber', 'title', 'duration']
+                  }
+                ]
+              },
+              {
+                model: Genre,
+                attributes: ['id', 'name'],
+                through: { attributes: [] }
+              }
+            ],
+            order: [
+              ['year', 'ASC'],
+              ['title', 'ASC'],
+              [Album, Song, 'disc', 'ASC'],
+              [Album, Song, 'trackNumber', 'ASC']
+            ],
+            where: {
+              [Op.not]: [{ $Album$: null }]
             },
-            {
-              model: Genre,
-              attributes: ['id', 'name'],
-              through: { attributes: [] }
+            through: {
+              attributes: ['consumed', 'consumedDate'],
+              where: { consumed: false }
             }
-          ],
-          order: [
-            ['year', 'ASC'],
-            ['title', 'ASC'],
-            [Album, Song, 'disc', 'ASC'],
-            [Album, Song, 'trackNumber', 'ASC']
-          ],
-          where: {
-            [Op.not]: [{ $Album$: null }]
-          },
-          through: {
-            attributes: ['consumed', 'consumedDate'],
-            where: { consumed: false }
-          }
-        })
-        .then(albums => res.status(200).send(albums))
-    })
+          })
+          .then(albums => {
+            res.status(200).send(albums)
+          })
+      })
+      .catch(error => res.status(400).send(error))
   }
+
   static randomAlbum2(req, res) {
     return req.user.then(user => {
       Album.findOne({
@@ -458,18 +464,16 @@ class Albums {
         message: 'No url'
       })
     }
-    const execFile = require('child_process').execFile
+    const execFile = require('child_process').exec
     let pythonProcess = null
     if (url.includes('allmusic.com/')) {
-      pythonProcess = await execFile('python', [
-        'server/controllers/scripts/allmusic.py',
-        url
-      ])
+      pythonProcess = await execFile(
+        'server\\controllers\\scripts\\allmusic.py ' + url
+      )
     } else {
-      pythonProcess = await execFile('python', [
-        'server/controllers/scripts/rym.py',
-        url
-      ])
+      pythonProcess = await execFile(
+        'server\\controllers\\scripts\\rym.py ' + url
+      )
     }
     pythonProcess.stdout.on('data', data => {
       const {
@@ -544,6 +548,115 @@ class Albums {
         })
       }
     })
+  }
+
+  static async createByUrlFlask(req, res) {
+    const { url } = req.body
+    if (
+      typeof url === 'undefined' ||
+      (!url.includes('allmusic.com/') && !url.includes('rateyourmusic.com/'))
+    ) {
+      return res.status(400).send({
+        success: false,
+        message: 'No url'
+      })
+    }
+    let result = null
+    let success = false
+    if (url.includes('allmusic.com/')) {
+      await axios
+        .post('http://192.168.1.90:5000/allmusic', {
+          url: url
+        })
+        .then(res => {
+          result = res.data
+          success = true
+        })
+        .catch(err => {
+          result = err
+        })
+    } else {
+      await axios
+        .post('http://192.168.1.90:5000/rym', {
+          url: url
+        })
+        .then(res => {
+          result = res.data
+          success = true
+        })
+        .catch(err => {
+          result = err
+        })
+    }
+    if (!success) {
+      return res.status(400).send({
+        success: false,
+        message: result.toString()
+      })
+    }
+    const {
+      image,
+      title,
+      year,
+      commentary,
+      duration,
+      numberOfSongs,
+      artist,
+      rating,
+      genres,
+      songs
+    } = result
+    return GenericMedia.findOrCreate({
+      where: {
+        title: title,
+        year: year
+      },
+      defaults: {
+        image: image,
+        commentary: commentary
+      }
+    })
+      .then(async ([newGM, createdShort]) => {
+        if (createdShort) {
+          genres.map(async genre => {
+            await Genre.findOrCreate({
+              where: { name: genre, isFor: 'Album' }
+            }).then(([newGenre, created]) => {
+              return newGM.addGenre(newGenre)
+            })
+          })
+          let GMId = newGM.id
+          await Album.create({
+            duration,
+            artist,
+            numberOfSongs,
+            rating,
+            GMId
+          }).then(async newAlbum => {
+            let newSongs = songs.map(newSong => {
+              return Song.create(newSong)
+            })
+            newSongs = await Promise.all(newSongs)
+            await newAlbum.setSongs(newSongs)
+          })
+        }
+        let user = await req.user
+        await user.addGenericMedium(newGM)
+        return res.status(201).send({
+          success: true,
+          message: 'Album successfully created',
+          newGM
+        })
+      })
+      .catch(error => {
+        if (!res._headerSent) {
+          return res.status(400).send({
+            success: false,
+            message: 'Album creation failed',
+            error
+          })
+        }
+      })
   }
 
   static modify(req, res) {
@@ -775,7 +888,8 @@ class Albums {
         })
         newSongs = await Promise.all(newSongs)
         newSongs = newSongs.map(elem => elem[0])
-        album.setSongs(newSongs)
+        album
+          .setSongs(newSongs)
           .then(data => {
             res.status(200).send({
               success: true,

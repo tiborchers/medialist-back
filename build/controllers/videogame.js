@@ -16,6 +16,10 @@ var _sequelize = require('sequelize');
 
 var _sequelize2 = _interopRequireDefault(_sequelize);
 
+var _axios = require('axios');
+
+var _axios2 = _interopRequireDefault(_axios);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -463,7 +467,7 @@ var VideoGames = function () {
       var _ref13 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4(req, res) {
         var _this3 = this;
 
-        var url, spawn, pythonProcess;
+        var url, execFile, pythonProcess;
         return regeneratorRuntime.wrap(function _callee4$(_context4) {
           while (1) {
             switch (_context4.prev = _context4.next) {
@@ -481,9 +485,9 @@ var VideoGames = function () {
                 }));
 
               case 3:
-                spawn = require('child_process').spawn;
+                execFile = require('child_process').execFile;
                 _context4.next = 6;
-                return spawn('python', ['server/controllers/scripts/hltb.py', url]);
+                return execFile('python3', ['server/controllers/scripts/hltb.py', url]);
 
               case 6:
                 pythonProcess = _context4.sent;
@@ -613,9 +617,162 @@ var VideoGames = function () {
       return createByUrl;
     }()
   }, {
+    key: 'createByUrlFlask',
+    value: function () {
+      var _ref21 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6(req, res) {
+        var _this4 = this;
+
+        var url, result, success, _result, image, title, year, commentary, HLTB, developer, rating, genres, consoles;
+
+        return regeneratorRuntime.wrap(function _callee6$(_context6) {
+          while (1) {
+            switch (_context6.prev = _context6.next) {
+              case 0:
+                url = req.body.url;
+
+                if (!(typeof url === 'undefined' || !url.includes('https://howlongtobeat.com/game.php?id='))) {
+                  _context6.next = 3;
+                  break;
+                }
+
+                return _context6.abrupt('return', res.status(400).send({
+                  success: false,
+                  message: 'No url'
+                }));
+
+              case 3:
+                result = null;
+                success = false;
+                _context6.next = 7;
+                return _axios2.default.post('http://python-dot-jovial-branch-266213.appspot.com/hltb', {
+                  url: url
+                }).then(function (res) {
+                  result = res;
+                  success = true;
+                }).catch(function (err) {
+                  result = err;
+                });
+
+              case 7:
+                if (success) {
+                  _context6.next = 9;
+                  break;
+                }
+
+                return _context6.abrupt('return', res.status(400).send({
+                  success: false,
+                  message: result.toString()
+                }));
+
+              case 9:
+                _result = result, image = _result.image, title = _result.title, year = _result.year, commentary = _result.commentary, HLTB = _result.HLTB, developer = _result.developer, rating = _result.rating, genres = _result.genres, consoles = _result.consoles;
+                return _context6.abrupt('return', GenericMedia.findOrCreate({
+                  where: {
+                    title: title,
+                    year: year
+                  },
+                  defaults: {
+                    image: image,
+                    commentary: commentary
+                  }
+                }).then(function () {
+                  var _ref23 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(_ref22) {
+                    var _ref24 = _slicedToArray(_ref22, 2),
+                        newGM = _ref24[0],
+                        createdShort = _ref24[1];
+
+                    var GMId, user;
+                    return regeneratorRuntime.wrap(function _callee5$(_context5) {
+                      while (1) {
+                        switch (_context5.prev = _context5.next) {
+                          case 0:
+                            if (!createdShort) {
+                              _context5.next = 5;
+                              break;
+                            }
+
+                            genres.map(function (genre) {
+                              Genre.findOrCreate({
+                                where: { name: genre, isFor: 'VideoGame' }
+                              }).then(function (_ref25) {
+                                var _ref26 = _slicedToArray(_ref25, 2),
+                                    newGenre = _ref26[0],
+                                    created = _ref26[1];
+
+                                newGM.addGenre(newGenre);
+                              });
+                            });
+                            GMId = newGM.id;
+                            _context5.next = 5;
+                            return VideoGame.create({ HLTB: HLTB, developer: developer, rating: rating, GMId: GMId }).then(function (newVideoGame) {
+                              consoles.map(function (aConsole) {
+                                Console.findOrCreate({
+                                  where: {
+                                    name: aConsole
+                                  }
+                                }).then(function (_ref27) {
+                                  var _ref28 = _slicedToArray(_ref27, 2),
+                                      created = _ref28[0],
+                                      found = _ref28[1];
+
+                                  newVideoGame.addConsole(created);
+                                });
+                              });
+                            });
+
+                          case 5:
+                            _context5.next = 7;
+                            return req.user;
+
+                          case 7:
+                            user = _context5.sent;
+                            _context5.next = 10;
+                            return user.addGenericMedium(newGM);
+
+                          case 10:
+                            res.status(201).send({
+                              success: true,
+                              message: 'VideoGame successfully created',
+                              newGM: newGM
+                            });
+
+                          case 11:
+                          case 'end':
+                            return _context5.stop();
+                        }
+                      }
+                    }, _callee5, _this4);
+                  }));
+
+                  return function (_x8) {
+                    return _ref23.apply(this, arguments);
+                  };
+                }()).catch(function (error) {
+                  res.status(400).send({
+                    success: false,
+                    message: 'VideoGame creation failed',
+                    error: error
+                  });
+                }));
+
+              case 11:
+              case 'end':
+                return _context6.stop();
+            }
+          }
+        }, _callee6, this);
+      }));
+
+      function createByUrlFlask(_x6, _x7) {
+        return _ref21.apply(this, arguments);
+      }
+
+      return createByUrlFlask;
+    }()
+  }, {
     key: 'modify',
     value: function modify(req, res) {
-      var _this4 = this;
+      var _this5 = this;
 
       var _req$body3 = req.body,
           image = _req$body3.image,
@@ -627,28 +784,28 @@ var VideoGames = function () {
           rating = _req$body3.rating;
 
       return VideoGame.findByPk(req.params.videoGameId).then(function () {
-        var _ref21 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(videoGame) {
+        var _ref29 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(videoGame) {
           var gm;
-          return regeneratorRuntime.wrap(function _callee5$(_context5) {
+          return regeneratorRuntime.wrap(function _callee7$(_context7) {
             while (1) {
-              switch (_context5.prev = _context5.next) {
+              switch (_context7.prev = _context7.next) {
                 case 0:
                   if (videoGame) {
-                    _context5.next = 2;
+                    _context7.next = 2;
                     break;
                   }
 
-                  return _context5.abrupt('return', res.status(404).send({
+                  return _context7.abrupt('return', res.status(404).send({
                     success: false,
                     message: 'VideoGame Not Found'
                   }));
 
                 case 2:
-                  _context5.next = 4;
+                  _context7.next = 4;
                   return videoGame.getGenericMedium();
 
                 case 4:
-                  gm = _context5.sent;
+                  gm = _context7.sent;
 
                   gm.update({
                     image: image || gm.image,
@@ -684,14 +841,14 @@ var VideoGames = function () {
 
                 case 7:
                 case 'end':
-                  return _context5.stop();
+                  return _context7.stop();
               }
             }
-          }, _callee5, _this4);
+          }, _callee7, _this5);
         }));
 
-        return function (_x6) {
-          return _ref21.apply(this, arguments);
+        return function (_x9) {
+          return _ref29.apply(this, arguments);
         };
       }()).catch(function (error) {
         res.status(400).send({
@@ -704,21 +861,21 @@ var VideoGames = function () {
   }, {
     key: 'played',
     value: function played(req, res) {
-      var _this5 = this;
+      var _this6 = this;
 
       return req.user.then(function (user) {
         VideoGame.findByPk(req.params.videoGameId).then(function () {
-          var _ref22 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6(short) {
+          var _ref30 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(short) {
             var gm;
-            return regeneratorRuntime.wrap(function _callee6$(_context6) {
+            return regeneratorRuntime.wrap(function _callee8$(_context8) {
               while (1) {
-                switch (_context6.prev = _context6.next) {
+                switch (_context8.prev = _context8.next) {
                   case 0:
-                    _context6.next = 2;
+                    _context8.next = 2;
                     return short.getGenericMedium();
 
                   case 2:
-                    gm = _context6.sent;
+                    gm = _context8.sent;
 
                     user.addGenericMedium(gm, {
                       through: {
@@ -741,14 +898,14 @@ var VideoGames = function () {
 
                   case 4:
                   case 'end':
-                    return _context6.stop();
+                    return _context8.stop();
                 }
               }
-            }, _callee6, _this5);
+            }, _callee8, _this6);
           }));
 
-          return function (_x7) {
-            return _ref22.apply(this, arguments);
+          return function (_x10) {
+            return _ref30.apply(this, arguments);
           };
         }()).catch(function (error) {
           res.status(400).send({
@@ -761,23 +918,23 @@ var VideoGames = function () {
   }, {
     key: 'playedDate',
     value: function playedDate(req, res) {
-      var _this6 = this;
+      var _this7 = this;
 
       var date = req.body.date;
 
       return req.user.then(function (user) {
         VideoGame.findByPk(req.params.shortId).then(function () {
-          var _ref23 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(videoGame) {
+          var _ref31 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(videoGame) {
             var gm;
-            return regeneratorRuntime.wrap(function _callee7$(_context7) {
+            return regeneratorRuntime.wrap(function _callee9$(_context9) {
               while (1) {
-                switch (_context7.prev = _context7.next) {
+                switch (_context9.prev = _context9.next) {
                   case 0:
-                    _context7.next = 2;
+                    _context9.next = 2;
                     return videoGame.getGenericMedium();
 
                   case 2:
-                    gm = _context7.sent;
+                    gm = _context9.sent;
 
                     user.addGenericMedium(gm, {
                       through: {
@@ -794,14 +951,14 @@ var VideoGames = function () {
 
                   case 4:
                   case 'end':
-                    return _context7.stop();
+                    return _context9.stop();
                 }
               }
-            }, _callee7, _this6);
+            }, _callee9, _this7);
           }));
 
-          return function (_x8) {
-            return _ref23.apply(this, arguments);
+          return function (_x11) {
+            return _ref31.apply(this, arguments);
           };
         }()).catch(function (error) {
           res.status(400).send({
@@ -814,21 +971,21 @@ var VideoGames = function () {
   }, {
     key: 'unPlayed',
     value: function unPlayed(req, res) {
-      var _this7 = this;
+      var _this8 = this;
 
       return req.user.then(function (user) {
         VideoGame.findByPk(req.params.shortId).then(function () {
-          var _ref24 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(videoGame) {
+          var _ref32 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(videoGame) {
             var gm;
-            return regeneratorRuntime.wrap(function _callee8$(_context8) {
+            return regeneratorRuntime.wrap(function _callee10$(_context10) {
               while (1) {
-                switch (_context8.prev = _context8.next) {
+                switch (_context10.prev = _context10.next) {
                   case 0:
-                    _context8.next = 2;
+                    _context10.next = 2;
                     return videoGame.getGenericMedium();
 
                   case 2:
-                    gm = _context8.sent;
+                    gm = _context10.sent;
 
                     user.addGenericMedium(gm, {
                       through: {
@@ -845,14 +1002,14 @@ var VideoGames = function () {
 
                   case 4:
                   case 'end':
-                    return _context8.stop();
+                    return _context10.stop();
                 }
               }
-            }, _callee8, _this7);
+            }, _callee10, _this8);
           }));
 
-          return function (_x9) {
-            return _ref24.apply(this, arguments);
+          return function (_x12) {
+            return _ref32.apply(this, arguments);
           };
         }()).catch(function (error) {
           res.status(400).send({
@@ -865,33 +1022,33 @@ var VideoGames = function () {
   }, {
     key: 'changeGenres',
     value: function changeGenres(req, res) {
-      var _this8 = this;
+      var _this9 = this;
 
       var genres = req.body.genres;
 
       VideoGame.findByPk(req.params.videoGameId).then(function () {
-        var _ref25 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(videoGame) {
+        var _ref33 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11(videoGame) {
           var GM, newGenres;
-          return regeneratorRuntime.wrap(function _callee9$(_context9) {
+          return regeneratorRuntime.wrap(function _callee11$(_context11) {
             while (1) {
-              switch (_context9.prev = _context9.next) {
+              switch (_context11.prev = _context11.next) {
                 case 0:
                   if (videoGame) {
-                    _context9.next = 2;
+                    _context11.next = 2;
                     break;
                   }
 
-                  return _context9.abrupt('return', res.status(404).send({
+                  return _context11.abrupt('return', res.status(404).send({
                     success: false,
                     message: 'VideoGame Not Found'
                   }));
 
                 case 2:
-                  _context9.next = 4;
+                  _context11.next = 4;
                   return videoGame.getGenericMedium();
 
                 case 4:
-                  GM = _context9.sent;
+                  GM = _context11.sent;
                   newGenres = genres.map(function (genre) {
                     return Genre.findOrCreate({
                       where: {
@@ -900,11 +1057,11 @@ var VideoGames = function () {
                       }
                     });
                   });
-                  _context9.next = 8;
+                  _context11.next = 8;
                   return Promise.all(newGenres);
 
                 case 8:
-                  newGenres = _context9.sent;
+                  newGenres = _context11.sent;
 
                   newGenres = newGenres.map(function (elem) {
                     return elem[0];
@@ -925,14 +1082,14 @@ var VideoGames = function () {
 
                 case 11:
                 case 'end':
-                  return _context9.stop();
+                  return _context11.stop();
               }
             }
-          }, _callee9, _this8);
+          }, _callee11, _this9);
         }));
 
-        return function (_x10) {
-          return _ref25.apply(this, arguments);
+        return function (_x13) {
+          return _ref33.apply(this, arguments);
         };
       }()).catch(function (error) {
         res.status(400).send({
@@ -945,23 +1102,23 @@ var VideoGames = function () {
   }, {
     key: 'changeConsoles',
     value: function changeConsoles(req, res) {
-      var _this9 = this;
+      var _this10 = this;
 
       var consoles = req.body.consoles;
 
       VideoGame.findByPk(req.params.videoGameId).then(function () {
-        var _ref26 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(videoGame) {
+        var _ref34 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee12(videoGame) {
           var newConsoles;
-          return regeneratorRuntime.wrap(function _callee10$(_context10) {
+          return regeneratorRuntime.wrap(function _callee12$(_context12) {
             while (1) {
-              switch (_context10.prev = _context10.next) {
+              switch (_context12.prev = _context12.next) {
                 case 0:
                   if (videoGame) {
-                    _context10.next = 2;
+                    _context12.next = 2;
                     break;
                   }
 
-                  return _context10.abrupt('return', res.status(404).send({
+                  return _context12.abrupt('return', res.status(404).send({
                     success: false,
                     message: 'VideoGame Not Found'
                   }));
@@ -974,11 +1131,11 @@ var VideoGames = function () {
                       }
                     });
                   });
-                  _context10.next = 5;
+                  _context12.next = 5;
                   return Promise.all(newConsoles);
 
                 case 5:
-                  newConsoles = _context10.sent;
+                  newConsoles = _context12.sent;
 
                   newConsoles = newConsoles.map(function (elem) {
                     return elem[0];
@@ -999,14 +1156,14 @@ var VideoGames = function () {
 
                 case 8:
                 case 'end':
-                  return _context10.stop();
+                  return _context12.stop();
               }
             }
-          }, _callee10, _this9);
+          }, _callee12, _this10);
         }));
 
-        return function (_x11) {
-          return _ref26.apply(this, arguments);
+        return function (_x14) {
+          return _ref34.apply(this, arguments);
         };
       }()).catch(function (error) {
         res.status(400).send({

@@ -7,7 +7,7 @@ import sys
 from bs4 import BeautifulSoup
 import requests
 
-URL = sys.argv[1]
+# URL = sys.argv[1]
 
 
 def to_seconds(song_duration):
@@ -19,7 +19,7 @@ def main(url):
     """This script prompts a user to enter an url for a movie in IMDB and returns a JSON"""
     headers = {
         "Accept-Language": "en-US,en;q=0.5",
-        "User-Agent": "Mozilla/5.0 (X11; Linux i586; rv:31.0) Gecko/20100101 Firefox/31.0",
+        "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0",
     }
     page = requests.get(url, headers=headers)
     soup = BeautifulSoup(page.content, "html.parser")
@@ -95,5 +95,5 @@ def main(url):
     return veamos
 
 
-print(json.dumps(main(URL)))
-sys.stdout.flush()
+# print(json.dumps(main(URL)))
+# sys.stdout.flush()

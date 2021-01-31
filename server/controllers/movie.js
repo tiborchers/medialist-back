@@ -1,5 +1,6 @@
 import model from '../models'
 import Sequelize from 'sequelize'
+import axios from 'axios'
 
 const { Movie, GenericMedia, Genre, UserGM, User } = model
 
@@ -195,32 +196,6 @@ class Movies {
     })
   }
 
-  static getMoviesSum(req, res) {
-    return req.user.then(user => {
-      user
-        .getGenericMedia({
-          includeIgnoreAttributes: false,
-          include: [
-            {
-              model: Movie,
-              attributes: []
-            }
-          ],
-          where: {
-            [Op.not]: [{ $Movie$: null }]
-          },
-          through: {
-            where: { consumed: false }
-          },
-          attributes: [
-            [Sequelize.fn('SUM', Sequelize.col('Movie.duration')), 'total']
-          ],
-          raw: true
-        })
-        .then(movies => res.status(200).send({ movies }))
-    })
-  }
-
   static list(req, res) {
     return req.user.then(user => {
       if (!user.admin) {
@@ -359,12 +334,12 @@ class Movies {
         message: 'No url'
       })
     }
-    const spawn = require('child_process').spawn
-    const pythonProcess = await spawn('python', [
-      'server/controllers/scripts/imdb.py',
-      url
-    ])
+    const execFile = require('child_process').exec
+    const pythonProcess = await execFile(
+      'server\\controllers\\scripts\\imdb.py ' + url
+    )
     pythonProcess.stdout.on('data', data => {
+      console.log(data)
       const {
         image,
         title,
@@ -398,11 +373,21 @@ class Movies {
           }
 
           let user = await req.user
-          await user.addGenericMedium(newGM)
-          res.status(201).send({
-            success: true,
-            message: 'Movie successfully created',
-            newGM
+          await user.hasGenericMedium(newGM).then(async result => {
+            if (result) {
+              res.status(409).send({
+                success: false,
+                message: 'Movie already exist in user list',
+                error: 'Movie already exist in user list'
+              })
+            } else {
+              await user.addGenericMedium(newGM)
+              res.status(201).send({
+                success: true,
+                message: 'Movie successfully created',
+                newGM
+              })
+            }
           })
         })
         .catch(error => {
@@ -421,6 +406,84 @@ class Movies {
         })
       }
     })
+  }
+
+  static async createByUrlFlask(req, res) {
+    const { url } = req.body
+    if (typeof url === 'undefined' || !url.includes('imdb.com/title/')) {
+      return res.status(400).send({
+        success: false,
+        message: 'No url'
+      })
+    }
+    let result = null
+    let success = false
+    await axios
+      .post('http://192.168.1.90:5000/imdb', {
+        url: url
+      })
+      .then(res => {
+        result = res.data
+        success = true
+      })
+      .catch(err => {
+        result = err
+      })
+    if (!success) {
+      return res.status(400).send({
+        success: false,
+        message: result.toString()
+      })
+    }
+    const { image, title, year, commentary, duration, rating, genres } = result
+    return GenericMedia.findOrCreate({
+      where: {
+        title: title,
+        year: year
+      },
+      defaults: {
+        image: image,
+        commentary: commentary
+      }
+    })
+      .then(async ([newGM, createdMovie]) => {
+        if (createdMovie) {
+          genres.map(genre => {
+            Genre.findOrCreate({
+              where: { name: genre, isFor: 'Movie' }
+            }).then(([newGenre, created]) => {
+              newGM.addGenre(newGenre)
+            })
+          })
+          let GMId = newGM.id
+          Movie.create({ duration, rating, GMId })
+        }
+
+        let user = await req.user
+        await user.hasGenericMedium(newGM).then(async result => {
+          if (result) {
+            res.status(409).send({
+              success: false,
+              message: 'Movie already exist in user list',
+              error: 'Movie already exist in user list'
+            })
+          } else {
+            await user.addGenericMedium(newGM)
+            res.status(201).send({
+              success: true,
+              message: 'Movie successfully created',
+              newGM
+            })
+          }
+        })
+      })
+      .catch(error => {
+        res.status(400).send({
+          success: false,
+          message: 'Movie creation failed',
+          error
+        })
+      })
   }
 
   static modify(req, res) {
@@ -601,6 +664,32 @@ class Movies {
           error
         })
       })
+  }
+
+  static sumOfHours(req, res) {
+    return req.user.then(user => {
+      user
+        .getGenericMedia({
+          includeIgnoreAttributes: false,
+          include: [
+            {
+              model: Movie,
+              attributes: []
+            }
+          ],
+          where: {
+            [Op.not]: [{ $Movie$: null }]
+          },
+          through: {
+            where: { consumed: false }
+          },
+          attributes: [
+            [Sequelize.fn('SUM', Sequelize.col('Movie.duration')), 'total']
+          ],
+          raw: true
+        })
+        .then(movies => res.status(200).send({ movies }))
+    })
   }
 }
 

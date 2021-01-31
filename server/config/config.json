@@ -1,6 +1,6 @@
 {
-  "development": {
-    "username": "mediauser",
+"development": {
+    "username": "postgres",
     "password": "2237328",
     "database": "medialist",
     "host": "127.0.0.1",
@@ -14,10 +14,10 @@
     "dialect": "mysql"
   },
   "production": {
-    "use_env_variable": "DATABASE_URL",
-    "dialect": "postgres",
-    "dialectOptions": {
-        "ssl": true
-    }
+    "host": "/cloudsql/jovial-branch-266213:southamerica-east1:medilist-back-psql",
+    "username": "mediauser",
+    "password": "2237328",
+    "database": "postgres",
+    "dialect": "postgres"
   }
 }

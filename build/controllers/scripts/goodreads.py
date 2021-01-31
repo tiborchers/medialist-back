@@ -7,7 +7,7 @@ import sys
 from bs4 import BeautifulSoup
 import requests
 
-URL = sys.argv[1]
+# URL = sys.argv[1]
 
 
 def main(url):
@@ -50,5 +50,5 @@ def main(url):
     return veamos
 
 
-print(json.dumps(main(URL)))
-sys.stdout.flush()
+# print(json.dumps(main(URL)))
+# sys.stdout.flush()

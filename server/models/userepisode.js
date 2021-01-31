@@ -3,7 +3,7 @@ module.exports = (sequelize, DataTypes) => {
   const UserEpisode = sequelize.define(
     'UserEpisode',
     {
-      consumed: DataTypes.BOOLEAN,
+      consumed: { type: DataTypes.BOOLEAN, default: false },
       consumedDate: DataTypes.DATE,
       userId: DataTypes.INTEGER,
       episodeId: DataTypes.INTEGER

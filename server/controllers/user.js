@@ -96,7 +96,14 @@ class Users {
             let token = jwt.sign(payload, jwtOptions.secretOrKey, {
               expiresIn: '2w'
             })
-            return res.status(200).send({ msg: 'ok', token: token, user: user })
+            let newUser = {
+              email: user.email,
+              username: user.username,
+              name: user.name
+            }
+            return res
+              .status(200)
+              .send({ msg: 'ok', token: token, user: newUser })
           } else {
             return res.status(401).send({
               success: false,

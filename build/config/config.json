@@ -1,5 +1,5 @@
 {
-  "development": {
+"development": {
     "username": "mediauser",
     "password": "2237328",
     "database": "medialist",
@@ -14,10 +14,10 @@
     "dialect": "mysql"
   },
   "production": {
+    "host": "/cloudsql/jovial-branch-266213:southamerica-east1:medilist-back-psql",
     "username": "mediauser",
     "password": "2237328",
-    "database": "medialist",
-    "host": "127.0.0.1",
+    "database": "postgres",
     "dialect": "postgres"
   }
 }

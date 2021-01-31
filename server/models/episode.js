@@ -5,6 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       title: DataTypes.STRING,
       aired: DataTypes.DATE,
+      episodeNumber: DataTypes.INTEGER,
       seasonId: {
         type: DataTypes.INTEGER,
         references: {
@@ -21,6 +22,10 @@ module.exports = (sequelize, DataTypes) => {
     Episode.belongsTo(models.Season, {
       foreignKey: 'seasonId',
       onDelete: 'CASCADE'
+    })
+    Episode.belongsToMany(models.User, {
+      through: 'UserEpisode',
+      foreignKey: 'episodeId'
     })
   }
   return Episode

@@ -8,6 +8,7 @@ import Console from '../controllers/console'
 import Book from '../controllers/book'
 import User from '../controllers/user'
 import Album from '../controllers/album'
+import Series from '../controllers/series'
 import cors from 'cors'
 import passport from 'passport'
 
@@ -35,7 +36,7 @@ export default app => {
   app.post(
     '/api/movies/url',
     passport.authenticate('jwt', { session: false }),
-    Movie.createByUrl
+    Movie.createByUrlFlask
   )
   app.get(
     '/api/movies',
@@ -92,6 +93,11 @@ export default app => {
     passport.authenticate('jwt', { session: false }),
     Movie.delete
   )
+  app.get(
+    '/api/movies/towatch/sum',
+    passport.authenticate('jwt', { session: false }),
+    Movie.sumOfHours
+  )
   //  Shorts
   app.post(
     '/api/shorts',
@@ -101,7 +107,7 @@ export default app => {
   app.post(
     '/api/shorts/url',
     passport.authenticate('jwt', { session: false }),
-    Short.createByUrl
+    Short.createByUrlFlask
   )
   app.get(
     '/api/shorts/towatch',
@@ -158,6 +164,11 @@ export default app => {
     passport.authenticate('jwt', { session: false }),
     Short.delete
   )
+  app.get(
+    '/api/shorts/towatch/sum',
+    passport.authenticate('jwt', { session: false }),
+    Short.sumOfHours
+  )
   //  Documentaries
   app.post(
     '/api/documentaries',
@@ -167,7 +178,7 @@ export default app => {
   app.post(
     '/api/documentaries/url',
     passport.authenticate('jwt', { session: false }),
-    Documentary.createByUrl
+    Documentary.createByUrlFlask
   )
   app.get(
     '/api/documentaries',
@@ -224,6 +235,11 @@ export default app => {
     passport.authenticate('jwt', { session: false }),
     Documentary.delete
   )
+  app.get(
+    '/api/documentaries/towatch/sum',
+    passport.authenticate('jwt', { session: false }),
+    Documentary.sumOfHours
+  )
   //  Videogames
   app.post(
     '/api/videogames',
@@ -233,7 +249,7 @@ export default app => {
   app.post(
     '/api/videogames/url',
     passport.authenticate('jwt', { session: false }),
-    VideoGame.createByUrl
+    VideoGame.createByUrlFlask
   )
   app.get(
     '/api/videogames',
@@ -313,6 +329,7 @@ export default app => {
   app.get('/api/genres/videogames', Genre.listVideoGames)
   app.get('/api/genres/books', Genre.listBooks)
   app.get('/api/genres/albums', Genre.listAlbums)
+  app.get('/api/genres/series', Genre.listSeries)
   app.get('/api/genres/', Genre.list)
   app.patch('/api/genres/:genreId', Genre.modify)
   app.delete('/api/genres/:genreId', Genre.delete)
@@ -327,7 +344,7 @@ export default app => {
   app.post(
     '/api/books/url',
     passport.authenticate('jwt', { session: false }),
-    Book.createByUrl
+    Book.createByUrlFlask
   )
   app.get(
     '/api/books',
@@ -408,7 +425,7 @@ export default app => {
   app.post(
     '/api/albums/url',
     passport.authenticate('jwt', { session: false }),
-    Album.createByUrl
+    Album.createByUrlFlask
   )
   app.get('/api/albums', Album.list)
   app.get(
@@ -476,14 +493,110 @@ export default app => {
     passport.authenticate('jwt', { session: false }),
     Album.delete
   )
+  // series
+  app.post(
+    '/api/series/url',
+    passport.authenticate('jwt', { session: false }),
+    Series.createByUrlFlask
+  )
+  app.get(
+    '/api/series/towatch',
+    passport.authenticate('jwt', { session: false }),
+    Series.toWatch
+  )
+  app.get(
+    '/api/series/done',
+    passport.authenticate('jwt', { session: false }),
+    Series.done
+  )
+  app.get(
+    '/api/series/wfns',
+    passport.authenticate('jwt', { session: false }),
+    Series.waitingForNewSeason
+  )
+  app.get(
+    '/api/series/watching',
+    passport.authenticate('jwt', { session: false }),
+    Series.watching
+  )
+  app.get(
+    '/api/series/dropped',
+    passport.authenticate('jwt', { session: false }),
+    Series.dropped
+  )
+  app.get(
+    '/api/series/towatch/sum',
+    passport.authenticate('jwt', { session: false }),
+    Series.getSuma
+  )
+  app.get(
+    '/api/series/towatch/count',
+    passport.authenticate('jwt', { session: false }),
+    Series.getCount
+  )
+  app.get(
+    '/api/series/watched/sum',
+    passport.authenticate('jwt', { session: false }),
+    Series.getEpisodeSum
+  )
+  app.get(
+    '/api/series/watched/count',
+    passport.authenticate('jwt', { session: false }),
+    Series.getEpisodeCount
+  )
+  app.get(
+    '/api/series/:seriesId',
+    passport.authenticate('jwt', { session: false }),
+    Series.get
+  )
+  app.patch(
+    '/api/series/:seriesId',
+    passport.authenticate('jwt', { session: false }),
+    Series.updateByUrlFlask
+  )
+  app.patch(
+    '/api/series/:seriesId/state',
+    passport.authenticate('jwt', { session: false }),
+    Series.seriesChangeState
+  )
+  app.get(
+    '/api/series/:seriesId/status',
+    passport.authenticate('jwt', { session: false }),
+    Series.getTotalWatched
+  )
+  app.patch(
+    '/api/episode/:episodeId/watched',
+    passport.authenticate('jwt', { session: false }),
+    Series.watched
+  )
+  app.patch(
+    '/api/episode/:episodeId/watchednostats',
+    passport.authenticate('jwt', { session: false }),
+    Series.watchedNoStats
+  )
+  app.patch(
+    '/api/episode/:episodeId/unwatched',
+    passport.authenticate('jwt', { session: false }),
+    Series.unWatched
+  )
+  app.get(
+    '/api/episode/',
+    passport.authenticate('jwt', { session: false }),
+    Series.getEpisode
+  )
+  app.delete(
+    '/api/series/:seriesId',
+    passport.authenticate('jwt', { session: false }),
+    Series.delete
+  )
+  /* app.delete(
+    '/api/series/',
+    passport.authenticate('jwt', { session: false }),
+    Series.nuke
+  ) */
   // users
   app.post('/api/register', User.create)
   app.post('/api/login', User.login)
-  app.get(
-    '/api/user/movies/sum',
-    passport.authenticate('jwt', { session: false }),
-    Movie.getMoviesSum
-  )
   app.get('/api/user/:id', User.get)
   app.get('/api/user/', User.list)
   app.get(

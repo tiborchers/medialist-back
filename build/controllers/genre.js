@@ -154,6 +154,22 @@ var Genres = function () {
       });
     }
   }, {
+    key: 'listSeries',
+    value: function listSeries(req, res) {
+      return Genre.findAll({
+        order: [['name', 'ASC']],
+        where: {
+          isFor: 'Series'
+        }
+      }).then(function (genres) {
+        res.status(200).send({
+          success: true,
+          message: 'List retrieved',
+          genres: genres
+        });
+      });
+    }
+  }, {
     key: 'delete',
     value: function _delete(req, res) {
       return Genre.findByPk(req.params.genreId).then(function (genre) {

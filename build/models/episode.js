@@ -4,6 +4,7 @@ module.exports = function (sequelize, DataTypes) {
   var Episode = sequelize.define('Episode', {
     title: DataTypes.STRING,
     aired: DataTypes.DATE,
+    episodeNumber: DataTypes.INTEGER,
     seasonId: {
       type: DataTypes.INTEGER,
       references: {
@@ -18,6 +19,10 @@ module.exports = function (sequelize, DataTypes) {
     Episode.belongsTo(models.Season, {
       foreignKey: 'seasonId',
       onDelete: 'CASCADE'
+    });
+    Episode.belongsToMany(models.User, {
+      through: 'UserEpisode',
+      foreignKey: 'episodeId'
     });
   };
   return Episode;

@@ -1,5 +1,5 @@
-import redis from 'redis'
+import Redis from 'ioredis'
 
-let rc = redis.createClient()
+const redis = new Redis()
 
-export default rc
+export default redis

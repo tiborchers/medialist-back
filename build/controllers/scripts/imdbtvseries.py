@@ -5,9 +5,7 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 
-URL = sys.argv[1]
-if "?ref" in URL:
-    URL = URL[: URL.index("?ref")]
+# URL = sys.argv[1]
 
 
 def parse_date(new_date):
@@ -48,16 +46,32 @@ def get_episodes(seasons, headers, url):
             date = j.find("div", class_="airdate").get_text()
             title = re.sub("[\n\t]", "", title)
             date = re.sub("[\n\t]", "", date)
+            try:
+                date = parse_date(date.strip()).split("/")
+                if len(date) < 3:
+                    date = None
+                date = "/".join(date)
+            except:
+                date = None
             hola[i]["episodes"].append(
-                {"title": title, "number": num, "date": parse_date(date.strip())}
+                {"title": title, "episodeNumber": num, "aired": date}
             )
-        hola[i]["initialDate"] = hola[i]["episodes"][0]["date"]
-        hola[i]["finalDate"] = hola[i]["episodes"][-1]["date"]
+        if len(hola[i]["episodes"]) == 0:
+            del hola[i]
+            continue
+        hola[i]["seasonNumber"] = i
+        hola[i]["initialDate"] = hola[i]["episodes"][0]["aired"]
+        hola[i]["finalDate"] = hola[i]["episodes"][-1]["aired"]
     return hola
 
 
 def main(url):
-    headers = {"Accept-Language": "en-US,en;q=0.5"}
+    if "?ref" in url:
+        url = url[: url.index("?ref")]
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
+        "Accept-Language": "en-US,en;q=0.5",
+    }
     page = requests.get(url, headers=headers)
     soup = BeautifulSoup(page.content, "html.parser")
     title = soup.find("div", class_="title_wrapper").find("h1").get_text().strip()
@@ -111,5 +125,5 @@ def main(url):
     return veamos
 
 
-print(json.dumps(main(URL)))
-sys.stdout.flush()
+# print(json.dumps(main(URL)))
+# sys.stdout.flush()

@@ -1,5 +1,6 @@
 import model from '../models'
 import Sequelize from 'sequelize'
+import axios from 'axios'
 
 const { Documentary, GenericMedia, Genre, User, UserGM } = model
 
@@ -327,7 +328,7 @@ class Documentaries {
 
   static delete(req, res) {
     return req.user.then(user => {
-      return Documentary.findByPk(req.params.movieId)
+      return Documentary.findByPk(req.params.documentaryId)
         .then(documentary => {
           if (!documentary) {
             return res.status(400).send({
@@ -362,11 +363,10 @@ class Documentaries {
         message: 'No url'
       })
     }
-    const spawn = require('child_process').spawn
-    const pythonProcess = await spawn('python', [
-      'server/controllers/scripts/imdb.py',
-      url
-    ])
+    const execFile = require('child_process').execFile
+    const pythonProcess = await execFile(
+      'server\\controllers\\scripts\\imdb.py ' + url
+    )
     pythonProcess.stdout.on('data', data => {
       const {
         image,
@@ -401,17 +401,27 @@ class Documentaries {
           }
 
           let user = await req.user
-          await user.addGenericMedium(newGM)
-          res.status(201).send({
-            success: true,
-            message: 'Movie successfully created',
-            newGM
+          await user.hasGenericMedium(newGM).then(async result => {
+            if (result) {
+              res.status(409).send({
+                success: false,
+                message: 'Documentary already exist in user list',
+                error: 'Documentary already exist in user list'
+              })
+            } else {
+              await user.addGenericMedium(newGM)
+              res.status(201).send({
+                success: true,
+                message: 'Documentary successfully created',
+                newGM
+              })
+            }
           })
         })
         .catch(error => {
           res.status(400).send({
             success: false,
-            message: 'Movie creation failed',
+            message: 'Documentary creation failed',
             error
           })
         })
@@ -424,6 +434,84 @@ class Documentaries {
         })
       }
     })
+  }
+
+  static async createByUrlFlask(req, res) {
+    const { url } = req.body
+    if (typeof url === 'undefined' || !url.includes('imdb.com/title/')) {
+      return res.status(400).send({
+        success: false,
+        message: 'No url'
+      })
+    }
+    let result = null
+    let success = false
+    await axios
+      .post('http://192.168.1.90:5000/imdb', {
+        url: url
+      })
+      .then(res => {
+        result = res.data
+        success = true
+      })
+      .catch(err => {
+        result = err
+      })
+    if (!success) {
+      return res.status(400).send({
+        success: false,
+        message: result.toString()
+      })
+    }
+    const { image, title, year, commentary, duration, rating, genres } = result
+    return GenericMedia.findOrCreate({
+      where: {
+        title: title,
+        year: year
+      },
+      defaults: {
+        image: image,
+        commentary: commentary
+      }
+    })
+      .then(async ([newGM, createdMovie]) => {
+        if (createdMovie) {
+          genres.map(genre => {
+            Genre.findOrCreate({
+              where: { name: genre, isFor: 'Documentary' }
+            }).then(([newGenre, created]) => {
+              newGM.addGenre(newGenre)
+            })
+          })
+          let GMId = newGM.id
+          Documentary.create({ duration, rating, GMId })
+        }
+
+        let user = await req.user
+        await user.hasGenericMedium(newGM).then(async result => {
+          if (result) {
+            res.status(409).send({
+              success: false,
+              message: 'Documentary already exist in user list',
+              error: 'Documentary already exist in user list'
+            })
+          } else {
+            await user.addGenericMedium(newGM)
+            res.status(201).send({
+              success: true,
+              message: 'Documentary successfully created',
+              newGM
+            })
+          }
+        })
+      })
+      .catch(error => {
+        res.status(400).send({
+          success: false,
+          message: 'Documentary creation failed',
+          error
+        })
+      })
   }
 
   static modify(req, res) {
@@ -475,7 +563,7 @@ class Documentaries {
 
   static watched(req, res) {
     return req.user.then(user => {
-      Documentary.findByPk(req.params.movieId)
+      Documentary.findByPk(req.params.documentaryId)
         .then(async documentary => {
           let gm = await documentary.getGenericMedium()
           user
@@ -493,6 +581,7 @@ class Documentaries {
               })
             })
             .catch(error => {
+              console.log(error)
               res.status(400).send({
                 success: true,
                 message: 'Documentary updated successfully!',
@@ -501,6 +590,7 @@ class Documentaries {
             })
         })
         .catch(error => {
+          console.log(error)
           res.status(400).send({
             success: false,
             error
@@ -512,7 +602,7 @@ class Documentaries {
   static watchedDate(req, res) {
     const { date } = req.body
     return req.user.then(user => {
-      Documentary.findByPk(req.params.movieId)
+      Documentary.findByPk(req.params.documentaryId)
         .then(async documentary => {
           let gm = await documentary.getGenericMedium()
           user
@@ -541,7 +631,7 @@ class Documentaries {
 
   static unwatched(req, res) {
     return req.user.then(user => {
-      Documentary.findByPk(req.params.movieId)
+      Documentary.findByPk(req.params.documentaryId)
         .then(async documentary => {
           let gm = await documentary.getGenericMedium()
           user
@@ -603,6 +693,35 @@ class Documentaries {
           error
         })
       })
+  }
+
+  static sumOfHours(req, res) {
+    return req.user.then(user => {
+      user
+        .getGenericMedia({
+          includeIgnoreAttributes: false,
+          include: [
+            {
+              model: Documentary,
+              attributes: []
+            }
+          ],
+          where: {
+            [Op.not]: [{ $Documentary$: null }]
+          },
+          through: {
+            where: { consumed: false }
+          },
+          attributes: [
+            [
+              Sequelize.fn('SUM', Sequelize.col('Documentary.duration')),
+              'total'
+            ]
+          ],
+          raw: true
+        })
+        .then(documentaries => res.status(200).send({ documentaries }))
+    })
   }
 }
 

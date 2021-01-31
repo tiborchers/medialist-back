@@ -14,7 +14,7 @@ import { strategy } from './jwt'
 const env = process.env.NODE_ENV || 'development'
 let hostname = '0.0.0.0'
 if (env === 'development') {
-  hostname = '127.0.0.1'
+  hostname = '0.0.0.0'
 }
 
 const port = process.env.PORT || 3000
@@ -23,9 +23,8 @@ const app = express()
 const server = http.createServer(app)
 
 app.use(logger('dev'))
-
-app.use(compression())
 app.use(helmet())
+app.use(compression())
 
 // log requests to the console
 // Parse incoming requests data app.use(bodyParser.json());

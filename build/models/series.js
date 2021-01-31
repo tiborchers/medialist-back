@@ -50,6 +50,10 @@ module.exports = function (sequelize, DataTypes) {
       through: 'UserSerie',
       foreignKey: 'seriesId'
     });
+    Series.belongsToMany(models.Genre, {
+      through: 'SeriesGenre',
+      foreignKey: 'seriesId'
+    });
   };
   return Series;
 };

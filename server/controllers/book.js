@@ -1,4 +1,5 @@
 import model from '../models'
+import axios from 'axios'
 import Sequelize from 'sequelize'
 
 const { Book, GenericMedia, Genre, UserGM, User } = model
@@ -384,11 +385,10 @@ class Books {
         message: 'No url'
       })
     }
-    const spawn = require('child_process').spawn
-    const pythonProcess = await spawn('python', [
-      'server/controllers/scripts/goodreads.py',
-      url
-    ])
+    const execFile = require('child_process').exec
+    const pythonProcess = await execFile(
+      'server\\controllers\\scripts\\goodreads.py ' + url
+    )
     pythonProcess.stdout.on('data', data => {
       const {
         image,
@@ -447,6 +447,86 @@ class Books {
         })
       }
     })
+  }
+
+  static async createByUrlFlask(req, res) {
+    const { url } = req.body
+    if (
+      typeof url === 'undefined' ||
+      !url.includes('goodreads.com/book/show/')
+    ) {
+      return res.status(400).send({
+        success: false,
+        message: 'No url'
+      })
+    }
+    let result = null
+    let success = false
+    await axios
+      .post('http://192.168.1.90:5000/goodreads', {
+        url: url
+      })
+      .then(res => {
+        result = res.data
+        success = true
+      })
+      .catch(err => {
+        result = err
+      })
+    if (!success) {
+      return res.status(400).send({
+        success: false,
+        message: result.toString()
+      })
+    }
+    const {
+      image,
+      title,
+      year,
+      commentary,
+      pages,
+      author,
+      rating,
+      genres
+    } = result
+    return GenericMedia.findOrCreate({
+      where: {
+        title: title,
+        year: year
+      },
+      defaults: {
+        image: image,
+        commentary: commentary
+      }
+    })
+      .then(async ([newGM, createdMovie]) => {
+        if (createdMovie) {
+          genres.map(genre => {
+            Genre.findOrCreate({
+              where: { name: genre, isFor: 'Book' }
+            }).then(([newGenre, created]) => {
+              newGM.addGenre(newGenre)
+            })
+          })
+          let GMId = newGM.id
+          Book.create({ pages, author, rating, GMId })
+        }
+
+        let user = await req.user
+        await user.addGenericMedium(newGM)
+        res.status(201).send({
+          success: true,
+          message: 'Book successfully created',
+          newGM
+        })
+      })
+      .catch(error => {
+        res.status(400).send({
+          success: false,
+          message: 'Book creation failed',
+          error
+        })
+      })
   }
 
   static modify(req, res) {

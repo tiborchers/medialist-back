@@ -138,7 +138,12 @@ var Users = function () {
                       var token = _jsonwebtoken2.default.sign(payload, _jwt.jwtOptions.secretOrKey, {
                         expiresIn: '2w'
                       });
-                      return res.status(200).send({ msg: 'ok', token: token, user: user });
+                      var newUser = {
+                        email: user.email,
+                        username: user.username,
+                        name: user.name
+                      };
+                      return res.status(200).send({ msg: 'ok', token: token, user: newUser });
                     } else {
                       return res.status(401).send({
                         success: false,
